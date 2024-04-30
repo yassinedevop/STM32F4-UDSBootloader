@@ -1,0 +1,40 @@
+$bin ?= @build/release/UdsBootloader.elf
+
+macro resetMachine
+"""
+   sysbus LoadELF $bin
+   sysbus.cpu VectorTableOffset 0x8000000
+"""
+
+macro reset
+"""
+   mach set 0; runMacro $resetMachine
+"""
+
+macro initMachine
+"""
+   machine LoadPlatformDescription @platform.repl
+   showAnalyzer sysbus.usart1
+   connector Connect sysbus.can1 can
+   logLevel -1 sysbus.can1
+   sysbus LogPeripheralAccess sysbus.can1
+"""
+
+macro sendCANMessage
+"""
+   sysbus.gpioPortC.TamperButton Press
+   sleep 0.2
+   sysbus.gpioPortC.TamperButton Release
+"""
+
+emulation CreateCANHub "can"
+
+
+mach create "sender"
+runMacro $initMachine
+
+
+machine StartGdbServer 3333
+
+runMacro $reset
+mach set "sender"
